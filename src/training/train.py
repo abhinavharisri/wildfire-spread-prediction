@@ -90,7 +90,7 @@ def main():
     print(f"model: {args.model}  |  parameters: {n_params:,}")
 
     criterion = FocalLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-4)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, factor=0.5)
 
     best_val_loss, epochs_no_improve = float("inf"), 0

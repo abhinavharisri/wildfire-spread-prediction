@@ -86,7 +86,7 @@ class NDWSDataset(Dataset):
                 "No TFRecord shards found. Did you download and unzip the "
                 "dataset? See README_IMPLEMENTATION.md."
             )
-        raw_ds = tf.data.TFRecordDataset(tfrecord_paths, compression_type="GZIP")
+        raw_ds = tf.data.TFRecordDataset(tfrecord_paths)  # NDWS shards are uncompressed
         parsed_ds = raw_ds.map(_parse_example, num_parallel_calls=tf.data.AUTOTUNE)
 
         self.inputs, self.labels = [], []
