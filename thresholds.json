@@ -1,0 +1,8 @@
+{
+  "prob_moderate": 0.35,
+  "prob_high": 0.59,
+  "prob_extreme": 0.67,
+  "uncertainty_bump": 0.0286,
+  "method": "validation-split calibration: cumulative precision targets {'prob_moderate': 0.15, 'prob_high': 0.4, 'prob_extreme': 0.6}, min support 300 px; bump = p90 of std among candidate pixels",
+  "validation_pixels": 7688192
+}

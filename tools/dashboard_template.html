@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Next-Day Wildfire Spread Prediction</title>
+<style>
+  :root{
+    --paper:#f6f2ea; --paper2:#ece6d9; --ink:#1d1b18; --ink2:#55504a; --rule:#d8d0bf;
+    --ember:#c2410c; --ember-d:#8f2e07; --slate:#3b3d40;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --t0:#7d9368; --t1:#d6a23a; --t2:#c2602a; --t3:#7f1d1d;
+  }
+  *{box-sizing:border-box}
+  html{background:var(--paper)}
+  body{margin:0;font-family:var(--serif);color:var(--ink);background:var(--paper);font-size:17px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 28px}
+  .eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2)}
+  .sample{background:var(--ember);color:#fff;font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-align:center;padding:7px 12px}
+  /* masthead */
+  .mast{padding:44px 0 26px;border-bottom:2px solid var(--ink)}
+  .mast h1{font-weight:500;font-size:clamp(34px,5.4vw,60px);line-height:1.04;letter-spacing:-.015em;margin:14px 0 14px;max-width:880px}
+  .mast h1 em{font-style:italic;color:var(--ember)}
+  .mast .deck{font-size:19px;color:var(--ink2);max-width:760px;margin:0}
+  .meta{display:flex;gap:26px;flex-wrap:wrap;margin-top:22px}
+  /* sections */
+  section{padding:46px 0 10px;border-bottom:1px solid var(--rule)}
+  .sec-head{display:grid;grid-template-columns:70px 1fr;gap:6px 18px;margin-bottom:22px;align-items:baseline}
+  .num{font-family:var(--mono);font-size:13px;color:var(--ember);letter-spacing:.08em}
+  h2{font-weight:500;font-size:28px;line-height:1.15;margin:0;letter-spacing:-.01em}
+  .lede{grid-column:2;color:var(--ink2);margin:6px 0 0;max-width:720px;font-size:17px}
+  /* at a glance */
+  .glance{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--ink);border-bottom:1px solid var(--rule)}
+  .glance>div{padding:20px 22px 22px 0;border-right:1px solid var(--rule);margin-right:22px}
+  .glance>div:last-child{border-right:none;margin-right:0}
+  .glance .v{font-size:clamp(40px,5vw,60px);font-weight:400;line-height:1;letter-spacing:-.02em;color:var(--ink)}
+  .glance .v small{font-size:.45em;color:var(--ember);margin-left:2px}
+  .glance .l{font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;margin-top:10px;color:var(--ink)}
+  .glance .d{font-size:14.5px;color:var(--ink2);margin-top:4px}
+  @media(max-width:820px){.glance{grid-template-columns:1fr 1fr}.glance>div{border-right:none;margin-right:0;border-bottom:1px solid var(--rule)}}
+  /* figures */
+  .figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:34px 42px}
+  figure.fig{margin:0}
+  figure.fig figcaption{font-size:14px;color:var(--ink2);margin-top:8px;border-top:1px solid var(--rule);padding-top:7px}
+  figure.fig figcaption b{font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink);margin-right:8px;font-weight:500}
+  .key{display:flex;gap:18px;font-family:var(--mono);font-size:11.5px;letter-spacing:.04em;margin:0 0 6px;color:var(--ink2)}
+  .key i{display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:6px}
+  svg text{font-family:var(--mono)}
+  .effrow{margin:0 0 18px}
+  .effrow .n{font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2);margin-bottom:5px}
+  .effrow .n b{color:var(--ember);font-weight:600}
+  .bar{height:15px;display:flex;align-items:center;padding-left:7px;color:#fff;font-family:var(--mono);font-size:11px;margin:3px 0;white-space:nowrap;min-width:fit-content}
+  /* explorer */
+  .explorer{display:grid;grid-template-columns:minmax(0,1.9fr) minmax(290px,1fr);gap:38px}
+  @media(max-width:920px){.explorer{grid-template-columns:1fr}}
+  .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;font-family:var(--mono);font-size:12px}
+  .toolbar select,.toolbar button{font:inherit;color:var(--ink);background:transparent;border:1px solid var(--ink);padding:6px 11px;border-radius:0;cursor:pointer}
+  .toolbar button:hover,.toolbar select:hover{background:var(--ink);color:var(--paper)}
+  .plates{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .plate figure{margin:0}
+  .plate canvas{width:100%;aspect-ratio:1;image-rendering:pixelated;display:block;background:var(--paper2);border:1px solid var(--ink)}
+  .plate figcaption{font-family:var(--mono);font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink2);margin-top:6px;line-height:1.35}
+  .plate figcaption b{color:var(--ink);font-weight:500}
+  .report h3{font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;font-weight:500;margin:0 0 10px;padding-bottom:6px;border-bottom:1px solid var(--ink)}
+  .big{font-size:38px;line-height:1;letter-spacing:-.01em}
+  .chip{display:inline-block;width:11px;height:11px;margin-right:8px;vertical-align:baseline}
+  .tierrow{display:grid;grid-template-columns:86px 1fr 52px;gap:10px;align-items:center;font-family:var(--mono);font-size:12px;margin:6px 0}
+  .tierrow .t{height:9px}
+  .quote{margin:16px 0 4px;padding:2px 0 2px 14px;border-left:3px solid var(--ember);font-size:18px;font-style:italic;line-height:1.35}
+  .sl{display:grid;grid-template-columns:1fr 52px;gap:2px 8px;font-family:var(--mono);font-size:11.5px;margin:11px 0 0}
+  .sl label{grid-column:1;color:var(--ink2);letter-spacing:.04em}
+  .sl b{grid-column:2;text-align:right;font-weight:500}
+  .sl input{grid-column:1/3;width:100%;accent-color:var(--ember)}
+  table{border-collapse:collapse;width:100%;font-size:15px}
+  th{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:500;text-align:left;color:var(--ink2);padding:6px 8px 6px 0;border-bottom:1px solid var(--ink)}
+  td{padding:8px 8px 8px 0;border-bottom:1px solid var(--rule)}
+  td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+  /* method */
+  .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0;border-top:1px solid var(--ink);counter-reset:s}
+  .steps div{padding:14px 16px 16px 0;border-right:1px solid var(--rule);margin-right:16px;font-size:15px;line-height:1.35}
+  .steps div:last-child{border-right:none}
+  .steps div:before{counter-increment:s;content:"0" counter(s);display:block;font-family:var(--mono);font-size:11.5px;color:var(--ember);letter-spacing:.1em;margin-bottom:6px}
+  .steps small{display:block;color:var(--ink2);font-size:13px;margin-top:3px}
+  .notes{columns:2;column-gap:44px;margin:12px 0 0;padding:0;list-style:none;font-size:15.5px}
+  .notes li{break-inside:avoid;margin:0 0 12px;padding-left:16px;position:relative}
+  .notes li:before{content:"—";position:absolute;left:0;color:var(--ember)}
+  @media(max-width:760px){.notes{columns:1}}
+  footer{padding:26px 0 60px;font-family:var(--mono);font-size:11.5px;color:var(--ink2);letter-spacing:.04em;line-height:1.7}
+</style>
+</head>
+<body>
+<div id="banner"></div>
+<div class="wrap">
+  <header class="mast">
+    <div class="eyebrow">Presidency University &middot; PSAIAC &middot; B.Tech Mini Project 2026</div>
+    <h1>Predicting where a wildfire goes next, with a <em>lighter</em> model and an honest error bar.</h1>
+    <p class="deck">A lightweight linear-attention U-Net forecasts next-day fire spread from satellite and weather data, then turns its own uncertainty into a four-level risk triage a fire-watch coordinator can act on.</p>
+    <div class="meta eyebrow"><span>Dataset: NDWS (Huot et al., 2022)</span><span>Task: next-day fire mask, 64 &times; 64 patches</span><span>Models: Attention U-Net vs. Lightweight U-Net</span></div>
+  </header>
+
+  <section>
+    <div class="sec-head"><span class="num">01</span><h2>At a glance</h2>
+      <p class="lede">Held-out test split. Both models share the same data, loss and optimiser.</p></div>
+    <div class="glance" id="kpis"></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">02</span><h2>Accuracy and cost, side by side</h2>
+      <p class="lede">Prior wildfire-spread work reports accuracy only. Here accuracy and compute cost are reported together, which is where the lightweight model earns its place.</p></div>
+    <div class="figs">
+      <figure class="fig"><div class="key"><span><i style="background:var(--slate)"></i>Attention U-Net</span><span><i style="background:var(--ember)"></i>Lightweight U-Net</span></div><div id="accChart"></div>
+        <figcaption><b>Fig. 1</b>Accuracy at a 0.5 decision threshold.</figcaption></figure>
+      <figure class="fig"><div class="key"><span><i style="background:var(--slate)"></i>Attention U-Net</span><span><i style="background:var(--ember)"></i>Lightweight U-Net</span></div><div id="effChart"></div>
+        <figcaption><b>Fig. 2</b>Compute cost. The lightweight bar is drawn to scale against the baseline.</figcaption></figure>
+      <figure class="fig"><div id="prChart"></div>
+        <figcaption><b>Fig. 3</b>Precision&ndash;recall over every test pixel.</figcaption></figure>
+      <figure class="fig"><div id="f1Chart"></div>
+        <figcaption><b>Fig. 4</b>F1 against decision threshold; dots mark each model&rsquo;s peak.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">03</span><h2>Inspect a real test patch</h2>
+      <p class="lede">Each patch is a 64 &times; 64 km window the models never saw in training. The risk map is recomputed in your browser from the lightweight model&rsquo;s MC-Dropout mean and spread, so moving a threshold changes the triage immediately.</p></div>
+    <div class="toolbar">
+      <button id="prev">&larr; Prev</button><select id="patchSel"></select><button id="next">Next &rarr;</button><span id="patchInfo"></span>
+    </div>
+    <div class="explorer">
+      <div class="plates" id="maps"></div>
+      <div class="report">
+        <h3>Triage report</h3>
+        <div><span class="big" id="maxTier"></span><div class="eyebrow" style="margin-top:4px">highest tier &middot; mean confidence <b id="conf" style="color:var(--ink)"></b></div></div>
+        <div id="tiers" style="margin-top:14px"></div>
+        <div class="quote" id="reco"></div>
+        <div id="scores" style="margin-top:16px"></div>
+        <h3 style="margin-top:22px">Thresholds</h3>
+        <div class="sl"><label>Moderate at or above (mean prob.)</label><b id="vMod"></b><input type="range" id="tMod" min="0.05" max="0.9" step="0.01"></div>
+        <div class="sl"><label>High at or above</label><b id="vHigh"></b><input type="range" id="tHigh" min="0.05" max="0.95" step="0.01"></div>
+        <div class="sl"><label>Extreme at or above</label><b id="vExt"></b><input type="range" id="tExt" min="0.05" max="0.99" step="0.01"></div>
+        <div class="sl"><label>Uncertainty bump (std at or above)</label><b id="vBump"></b><input type="range" id="tBump" min="0.005" max="0.5" step="0.005"></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">04</span><h2>Can the uncertainty be trusted?</h2>
+      <p class="lede">Computed over the whole test split, not just the patches above. A sound triage shows the observed fire rate climbing with the tier.</p></div>
+    <div class="figs">
+      <figure class="fig"><div id="calTable"></div><figcaption><b>Table 1</b>Observed fire rate by risk tier.</figcaption></figure>
+      <figure class="fig"><div class="key"><span><i style="background:var(--slate)"></i>Attention</span><span><i style="background:var(--ember)"></i>Lightweight</span><span>dashed = training loss</span></div><div id="histChart"></div>
+        <figcaption><b>Fig. 5</b>Training and validation loss per epoch.</figcaption></figure>
+    </div>
+    <p id="uncStats" style="margin:18px 0 0;max-width:760px;color:var(--ink2)"></p>
+  </section>
+
+  <section style="border-bottom:none">
+    <div class="sec-head"><span class="num">05</span><h2>How it works, and where it falls short</h2></div>
+    <div class="steps">
+      <div>12-channel NDWS patch<small>terrain, weather, vegetation, drought, today&rsquo;s fire</small></div>
+      <div>Clip and normalise<small>per channel, to physical ranges</small></div>
+      <div>Lightweight U-Net<small>depthwise-separable convolutions + linear attention</small></div>
+      <div>20 MC-Dropout passes<small>dropout left on at test time</small></div>
+      <div>Mean and spread<small>per pixel: prediction and uncertainty</small></div>
+      <div>Risk tier + advice<small>Low, Moderate, High, Extreme</small></div>
+    </div>
+    <ul class="notes" style="margin-top:26px">
+      <li>One dataset (contiguous United States). Generalisation to other regions is untested.</li>
+      <li>Absolute accuracy is modest and varies between training runs; the two models are best described as comparable.</li>
+      <li>FLOPs are counted with <code>thop</code> (convolutions, linear layers, batch-norm). GPU latency is near-identical at this input size.</li>
+      <li>Risk thresholds are calibrated on a validation split, not against real operational outcomes.</li>
+      <li>Decision support only. Not an autonomous evacuation or dispatch system.</li>
+    </ul>
+  </section>
+  <footer id="foot"></footer>
+</div>
+
+<script>
+const DATA = /*__DATA__*/null;
+const M = DATA.metrics, TIERS = ["Low","Moderate","High","Extreme"];
+const TCOL = ["#7d9368","#d6a23a","#c2602a","#7f1d1d"];
+const CA = "#3b3d40", CL = "#c2410c";
+const RECO = {Low:"No action needed; continue routine monitoring.",Moderate:"Monitor closely; alert local fire watch.",High:"Prepare containment resources; consider pre-positioning crews.",Extreme:"Escalate immediately to incident command; evacuation planning recommended."};
+const A = M.attention, L = M.lightweight, SMAX = DATA.std_max || 0.5;
+const $ = id => document.getElementById(id);
+const fmt = (v,d=3) => (v===null||v===undefined)?"n/a":Number(v).toFixed(d);
+
+if (M.meta.synthetic) $("banner").innerHTML = '<div class="sample">SAMPLE DATA &mdash; synthetic maps and placeholder metrics for a layout preview. Not real results.</div>';
+
+/* ---------- at a glance ---------- */
+(function(){
+  const pr = A.efficiency.parameters / L.efficiency.parameters;
+  const fr = (A.efficiency.FLOPs_G && L.efficiency.FLOPs_G) ? A.efficiency.FLOPs_G / L.efficiency.FLOPs_G : null;
+  const cpu = (A.efficiency_cpu && L.efficiency_cpu && A.efficiency_cpu.latency_ms_per_image && L.efficiency_cpu.latency_ms_per_image) ? A.efficiency_cpu.latency_ms_per_image / L.efficiency_cpu.latency_ms_per_image : null;
+  const cards = [
+    {v:pr.toFixed(1), u:"&times;", l:"fewer parameters", d:`${A.efficiency.parameters_M}M down to ${L.efficiency.parameters_M}M`},
+    {v:fr?fr.toFixed(1):"n/a", u:fr?"&times;":"", l:"fewer FLOPs per patch", d:fr?`${A.efficiency.FLOPs_G}G down to ${L.efficiency.FLOPs_G}G`:""},
+    {v:fmt(L.accuracy["AUC-PR"]), u:"", l:"lightweight AUC-PR", d:`Attention U-Net: ${fmt(A.accuracy["AUC-PR"])}`},
+    cpu ? {v:cpu.toFixed(1), u:"&times;", l:"faster on CPU", d:`${fmt(A.efficiency_cpu.latency_ms_per_image,1)} ms down to ${fmt(L.efficiency_cpu.latency_ms_per_image,1)} ms`}
+        : {v:fmt(L.accuracy["F1"]), u:"", l:"lightweight F1", d:`Attention U-Net: ${fmt(A.accuracy["F1"])}`}
+  ];
+  $("kpis").innerHTML = cards.map(c=>`<div><div class="v">${c.v}<small>${c.u}</small></div><div class="l">${c.l}</div><div class="d">${c.d}</div></div>`).join("");
+})();
+
+/* ---------- SVG helpers ---------- */
+function svgWrap(w,h,inner){return `<svg viewBox="0 0 ${w} ${h}" width="100%" role="img">${inner}</svg>`}
+function axes(w,h,m,xt,yt,xl,yl){
+  let s=`<line x1="${m.l}" y1="${h-m.b}" x2="${w-m.r}" y2="${h-m.b}" stroke="#1d1b18"/>`;
+  xt.forEach(([v,p])=>{const x=m.l+p*(w-m.l-m.r);s+=`<line x1="${x}" y1="${h-m.b}" x2="${x}" y2="${h-m.b+4}" stroke="#1d1b18"/><text x="${x}" y="${h-m.b+17}" font-size="10.5" text-anchor="middle" fill="#55504a">${v}</text>`});
+  yt.forEach(([v,p])=>{const y=h-m.b-p*(h-m.t-m.b);s+=`<line x1="${m.l}" y1="${y}" x2="${w-m.r}" y2="${y}" stroke="#d8d0bf" stroke-width="${p===0?0:1}"/><text x="${m.l-8}" y="${y+3.5}" font-size="10.5" text-anchor="end" fill="#55504a">${v}</text>`});
+  s+=`<text x="${(m.l+w-m.r)/2}" y="${h-3}" font-size="10.5" text-anchor="middle" fill="#55504a" letter-spacing=".06em">${xl.toUpperCase()}</text>`;
+  s+=`<text transform="translate(11 ${(m.t+h-m.b)/2}) rotate(-90)" font-size="10.5" text-anchor="middle" fill="#55504a" letter-spacing=".06em">${yl.toUpperCase()}</text>`;
+  return s;
+}
+function lineChart(el, series, o){
+  const w=470,h=290,m={l:o.ml||50,r:14,t:12,b:40};
+  const xmin=o.xmin,xmax=o.xmax,ymin=o.ymin||0,ymax=o.ymax;
+  const X=v=>m.l+(v-xmin)/(xmax-xmin)*(w-m.l-m.r), Y=v=>h-m.b-(v-ymin)/(ymax-ymin)*(h-m.t-m.b);
+  const ticks=(a,b,n,d)=>Array.from({length:n+1},(_,i)=>{const v=a+(b-a)*i/n;return [Number(v.toFixed(d)),i/n]});
+  let s=axes(w,h,m,ticks(xmin,xmax,o.xn||5,o.xdec===undefined?2:o.xdec),ticks(ymin,ymax,o.yn||5,o.dec||2),o.xl,o.yl);
+  series.forEach(se=>{
+    const pts=se.x.map((x,i)=>`${X(x).toFixed(1)},${Y(se.y[i]).toFixed(1)}`).join(" ");
+    s+=`<polyline fill="none" stroke="${se.c}" stroke-width="2" ${se.dash?'stroke-dasharray="5 4" opacity=".75"':''} points="${pts}"/>`;
+    if(se.mark){const i=se.y.indexOf(Math.max(...se.y));s+=`<circle cx="${X(se.x[i])}" cy="${Y(se.y[i])}" r="4" fill="${se.c}"/><text x="${X(se.x[i])}" y="${Y(se.y[i])-9}" font-size="10" text-anchor="middle" fill="${se.c}">${se.y[i].toFixed(3)}</text>`}
+  });
+  el.innerHTML=svgWrap(w,h,s)+(o.legend?`<div class="key" style="margin-top:6px">${series.filter(s=>s.n).map(se=>`<span><i style="background:${se.c}"></i>${se.n}</span>`).join("")}</div>`:"");
+}
+
+/* ---------- accuracy bars ---------- */
+(function(){
+  const w=470,h=290,m={l:50,r:14,t:16,b:40}, names=["AUC-PR","F1","IoU"];
+  const ymax=Math.ceil(Math.max(...names.map(n=>Math.max(A.accuracy[n],L.accuracy[n])))*20)/20+0.05;
+  const Y=v=>h-m.b-v/ymax*(h-m.t-m.b);
+  let s=axes(w,h,m,[],Array.from({length:6},(_,i)=>[(ymax*i/5).toFixed(2),i/5]),"","score");
+  const gw=(w-m.l-m.r)/3;
+  names.forEach((n,i)=>{
+    [[A,CA],[L,CL]].forEach(([mod,c],j)=>{
+      const v=mod.accuracy[n], bw=gw*0.28, x=m.l+gw*i+gw*0.17+j*(bw+5);
+      s+=`<rect x="${x}" y="${Y(v)}" width="${bw}" height="${h-m.b-Y(v)}" fill="${c}"/><text x="${x+bw/2}" y="${Y(v)-5}" font-size="10.5" text-anchor="middle" fill="#1d1b18">${v.toFixed(3)}</text>`;
+    });
+    s+=`<text x="${m.l+gw*i+gw/2}" y="${h-m.b+18}" font-size="11" text-anchor="middle" fill="#1d1b18" letter-spacing=".06em">${n}</text>`;
+  });
+  $("accChart").innerHTML=svgWrap(w,h,s);
+})();
+
+/* ---------- efficiency rows ---------- */
+(function(){
+  const rows=[["Parameters",A.efficiency.parameters_M,L.efficiency.parameters_M,"M"],["FLOPs per patch",A.efficiency.FLOPs_G,L.efficiency.FLOPs_G,"G"],
+    [`Latency, ${A.efficiency.device}`,A.efficiency.latency_ms_per_image,L.efficiency.latency_ms_per_image,"ms"]];
+  if(A.efficiency_cpu&&L.efficiency_cpu&&A.efficiency_cpu.latency_ms_per_image) rows.push(["Latency, CPU",A.efficiency_cpu.latency_ms_per_image,L.efficiency_cpu.latency_ms_per_image,"ms"]);
+  $("effChart").innerHTML=rows.filter(r=>r[1]&&r[2]).map(([n,a,l,u])=>{
+    const pct=Math.max(l/a*100,16);
+    return `<div class="effrow"><div class="n">${n} &mdash; lightweight uses <b>${(l/a*100).toFixed(0)}%</b> of baseline</div>
+      <div class="bar" style="width:100%;background:${CA}">${fmt(a,a<10?3:2)} ${u}</div>
+      <div class="bar" style="width:${pct}%;background:${CL}">${fmt(l,l<10?3:2)} ${u}</div></div>`}).join("");
+})();
+
+/* ---------- PR + F1 + history ---------- */
+lineChart($("prChart"),[{x:M.pr_curves.attention.recall,y:M.pr_curves.attention.precision,c:CA,n:"Attention U-Net"},{x:M.pr_curves.lightweight.recall,y:M.pr_curves.lightweight.precision,c:CL,n:"Lightweight U-Net"}],{xmin:0,xmax:1,ymax:1,xl:"Recall",yl:"Precision",legend:true});
+lineChart($("f1Chart"),[{x:M.f1_sweep.thresholds,y:M.f1_sweep.attention,c:CA,n:"Attention U-Net",mark:true},{x:M.f1_sweep.thresholds,y:M.f1_sweep.lightweight,c:CL,n:"Lightweight U-Net",mark:true}],
+  {xmin:0.05,xmax:0.95,ymax:Math.ceil(Math.max(...M.f1_sweep.attention,...M.f1_sweep.lightweight)*10)/10+0.05,xl:"Decision threshold",yl:"F1",xn:9,legend:true});
+(function(){
+  const H=DATA.history;
+  if(!H||!H.attention){ $("histChart").innerHTML='<p style="color:var(--ink2)">Training logs not provided.</p>'; return; }
+  const all=[...H.attention.val_loss,...H.attention.train_loss,...H.lightweight.val_loss,...H.lightweight.train_loss];
+  const ymax=Math.ceil(Math.max(...all)*1000)/1000, ymin=Math.floor(Math.min(...all)*1000)/1000;
+  const xmax=Math.max(...H.attention.epoch,...H.lightweight.epoch);
+  lineChart($("histChart"),[
+    {x:H.attention.epoch,y:H.attention.train_loss,c:CA,dash:true},{x:H.attention.epoch,y:H.attention.val_loss,c:CA},
+    {x:H.lightweight.epoch,y:H.lightweight.train_loss,c:CL,dash:true},{x:H.lightweight.epoch,y:H.lightweight.val_loss,c:CL}],
+    {xmin:1,xmax:xmax,ymin:ymin,ymax:ymax,xl:"Epoch",yl:"Focal loss",dec:4,xdec:0,ml:68,xn:Math.min(xmax-1,6)});
+})();
+
+/* ---------- calibration table ---------- */
+$("calTable").innerHTML=`<table><tr><th>Tier</th><th class="n">% of pixels</th><th class="n">Observed fire rate</th></tr>`+M.risk_calibration.map((r,i)=>
+  `<tr><td><span class="chip" style="background:${TCOL[i]}"></span>${r.tier}</td><td class="n">${fmt(r.pct_of_pixels,2)}%</td><td class="n"><b>${r.observed_fire_rate===null?"n/a":(100*r.observed_fire_rate).toFixed(1)+"%"}</b></td></tr>`).join("")+`</table>`;
+(function(){const u=M.uncertainty_stats;
+  $("uncStats").innerHTML=`The model&rsquo;s spread (MC-Dropout standard deviation) averages <b>${u.mean_std_correct_pixels}</b> on correctly classified pixels but <b>${u.mean_std_wrong_pixels}</b> on misclassified ones, so it does flag where the model is more likely to be wrong. The uncertainty bump escalated <b>${(100*u.fraction_pixels_bumped).toFixed(2)}%</b> of pixels by one tier.`;})();
+
+/* ---------- explorer ---------- */
+function dec(b64){const s=atob(b64),a=new Uint8Array(s.length);for(let i=0;i<s.length;i++)a[i]=s.charCodeAt(i);return a}
+const P = DATA.patches.slice().sort((a,b)=>b.fire-a.fire).map(p=>({...p, prev:dec(p.prev), y:dec(p.y), att:dec(p.att), mean:dec(p.mean), std:dec(p.std)}));
+const ANCH={
+  ember:[[240,234,222],[246,205,150],[234,128,60],[172,48,18],[58,10,8]],
+  slate:[[240,234,222],[170,186,186],[86,120,130],[30,56,70]]};
+function ramp(name,t){const a=ANCH[name],x=Math.min(Math.max(t,0),1)*(a.length-1),i=Math.min(Math.floor(x),a.length-2),f=x-i;return a[i].map((c,k)=>Math.round(c+(a[i+1][k]-c)*f))}
+const defs=[["prev","Fire <b>today</b>"],["y","Ground truth: fire <b>tomorrow</b>"],["att","Attention U-Net prediction"],["mean","Lightweight U-Net prediction"],["std","Uncertainty (std of 20 passes)"],["tier","Risk tier map"]];
+$("maps").innerHTML=defs.map(([k,n],i)=>`<div class="plate"><figure><canvas id="c_${k}" width="64" height="64"></canvas><figcaption>${String.fromCharCode(65+i)} &middot; ${n}</figcaption></figure></div>`).join("");
+function paint(id,fn){const c=$("c_"+id),g=c.getContext("2d"),im=g.createImageData(64,64);for(let i=0;i<4096;i++){const [r,gg,b]=fn(i);im.data[4*i]=r;im.data[4*i+1]=gg;im.data[4*i+2]=b;im.data[4*i+3]=255}g.putImageData(im,0,0)}
+const hex=h=>[1,3,5].map(i=>parseInt(h.substr(i,2),16));
+let cur=0;
+const d0=M.meta.default_thresholds;
+const init={tMod:d0.prob_moderate,tHigh:d0.prob_high,tExt:d0.prob_extreme,tBump:d0.uncertainty_bump};
+$("tBump").max=Math.max(SMAX,init.tBump*1.5);
+Object.keys(init).forEach(k=>{$(k).value=init[k];$(k).addEventListener("input",render)});
+$("patchSel").innerHTML=P.map((p,i)=>`<option value="${i}">Patch #${p.idx} &middot; ${(100*p.fire).toFixed(2)}% burns</option>`).join("");
+$("patchSel").onchange=e=>{cur=+e.target.value;render()};
+$("prev").onclick=()=>{cur=(cur-1+P.length)%P.length;$("patchSel").value=cur;render()};
+$("next").onclick=()=>{cur=(cur+1)%P.length;$("patchSel").value=cur;render()};
+function scores(pred,y){let tp=0,fp=0,fn=0;for(let i=0;i<4096;i++){const b=pred[i]/255>=0.5,t=y[i]===1;if(b&&t)tp++;else if(b)fp++;else if(t)fn++}
+  const d=2*tp+fp+fn;return d?[2*tp/d,tp/(tp+fp+fn)]:[NaN,NaN]}
+function render(){
+  const p=P[cur],tm=+$("tMod").value,th=Math.max(+$("tHigh").value,tm),te=Math.max(+$("tExt").value,th),tb=+$("tBump").value;
+  $("vMod").textContent=tm.toFixed(2);$("vHigh").textContent=th.toFixed(2);$("vExt").textContent=te.toFixed(2);$("vBump").textContent=tb.toFixed(3);
+  $("patchInfo").textContent=`${cur+1} of ${P.length}`;
+  const tier=new Uint8Array(4096);let stdSum=0;const cnt=[0,0,0,0];
+  for(let i=0;i<4096;i++){const m=p.mean[i]/255,s=p.std[i]/255*SMAX;let t=0;if(m>=tm)t=1;if(m>=th)t=2;if(m>=te)t=3;if(s>=tb)t=Math.min(t+1,3);tier[i]=t;cnt[t]++;stdSum+=s}
+  const mt=cnt[3]?3:cnt[2]?2:cnt[1]?1:0, conf=1-stdSum/4096;
+  paint("prev",i=>p.prev[i]?hex("#b4310d"):hex("#ece6d9"));
+  paint("y",i=>p.y[i]?hex("#b4310d"):hex("#ece6d9"));
+  paint("att",i=>ramp("ember",p.att[i]/255));
+  paint("mean",i=>ramp("ember",p.mean[i]/255));
+  paint("std",i=>ramp("slate",p.std[i]/255));
+  paint("tier",i=>tier[i]===0?hex("#ece6d9"):hex(TCOL[tier[i]]));
+  $("maxTier").innerHTML=`<span class="chip" style="background:${TCOL[mt]};width:16px;height:16px"></span>${TIERS[mt]}`;
+  $("conf").textContent=conf.toFixed(3);
+  $("tiers").innerHTML=TIERS.map((n,i)=>`<div class="tierrow"><span>${n}</span><div class="t" style="width:${Math.max(cnt[i]/40.96,0.5)}%;background:${TCOL[i]}"></div><span style="text-align:right">${(cnt[i]/40.96).toFixed(1)}%</span></div>`).join("");
+  $("reco").textContent=RECO[TIERS[mt]];
+  const [fa,ia]=scores(p.att,p.y),[fl,il]=scores(p.mean,p.y),f=v=>isNaN(v)?"n/a":v.toFixed(2);
+  $("scores").innerHTML=`<table><tr><th>This patch</th><th class="n">F1</th><th class="n">IoU</th></tr><tr><td>Attention U-Net</td><td class="n">${f(fa)}</td><td class="n">${f(ia)}</td></tr><tr><td>Lightweight U-Net</td><td class="n">${f(fl)}</td><td class="n">${f(il)}</td></tr></table>`;
+}
+render();
+$("foot").innerHTML=`Test split: ${M.meta.n_test_patches} patches &middot; ${(100*M.meta.fire_pixel_fraction).toFixed(2)}% fire pixels &middot; ${M.meta.mc_samples} MC-Dropout samples<br>Efficiency measured on ${A.efficiency.device}${A.efficiency_cpu?" and CPU":""} &middot; uncertainty plate scaled to the largest std among the featured patches (${SMAX.toFixed(3)})`;
+</script>
+</body>
+</html>

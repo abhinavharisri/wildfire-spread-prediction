@@ -91,7 +91,7 @@ def risk_tier_report(mean: np.ndarray, std: np.ndarray, thresholds: RiskThreshol
     """Summarizes one prediction map into the kind of readable line an
     emergency planner would want, mirroring the fraud-detection deck's
     'investigation summary' pattern."""
-    tier = assign_risk_tier(mean, std)
+    tier = assign_risk_tier(mean, std, thresholds)
     total = tier.size
     counts = {name: int((tier == i).sum()) for i, name in enumerate(RISK_TIERS)}
     pct = {name: round(100 * c / total, 2) for name, c in counts.items()}
